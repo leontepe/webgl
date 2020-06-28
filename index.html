@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebGL 3D intro</title>
     <style>
-        html, body {
+        html,
+        body {
             font-family: sans-serif;
             margin: 0;
             border: 0;
@@ -45,22 +46,23 @@
             display: block;
         }
     </style>
+
+    <script type="text/javascript" src="gl-matrix.js"></script>
+    <script type="text/javascript" src="simple-rotator.js"></script>
+    <script type="text/javascript" src="index.js"></script>
 </head>
 
-<body>
+<body onload="init()">
     <canvas id="glCanvas"></canvas>
 
     <div id="controls">
         <input type="checkbox" id="rotationCheckbox" checked>
         <label for="rotationCheckbox">Rotation</label>
 
-        <input type="checkbox" id="lightingCheckbox" checked>
-        <label for="lightingCheckbox">Simple Lighting</label>
+        <!-- <input type="checkbox" id="lightingCheckbox" checked>
+        <label for="lightingCheckbox">Simple Lighting</label> -->
     </div>
 
 </body>
-
-<script src="../gl-matrix.js"></script>
-<script src="./index.js" type="module"></script>
 
 </html>

@@ -1,20 +1,42 @@
-var cubeRotation = 0
-var rotate = true
-var lightingEnabled = true
 
-const rotationSpeed = 1.5
+"use strict";
 
-function main() {
-    const gl = canvas.getContext('webgl')
+var canvas;
 
-    if (!gl) {
-        alert('Unable to init WebGL')
-        return
-    }
+var gl;
 
+var cubeRotation = 0;
+var rotate = true;
+var lightingEnabled = true;
 
-    // Vertex shader
-    const vsSourceWithLighting = `
+/** A SimpleRotator object to enable rotation by mouse dragging. */
+var rotator;
+
+const standardView = [[2, 2, 5], [0, 1, 0], 6];
+
+const rotationSpeed = 1;
+
+var modelViewMatrix = mat4.create()
+
+function init() {
+    const rotationCheckbox = document.querySelector('#rotationCheckbox')
+    rotationCheckbox.addEventListener('change', () => {
+        rotate = !rotate
+    })
+
+    try {
+        canvas = document.querySelector('#glCanvas');
+        gl = canvas.getContext('webgl');
+
+        if (!gl) {
+            gl = canvas.getContext('experimental-webgl');
+        }
+        if (!gl) {
+            throw "Could not create WebGL context.";
+        }
+
+        // Vertex shader
+        const vsSourceWithLighting = `
         attribute vec4 aVertexPosition;
         attribute vec4 aVertexColor;
         
@@ -44,8 +66,8 @@ function main() {
         }
     `
 
-    // Fragment shader
-    const fsSourceWithLighting = `
+        // Fragment shader
+        const fsSourceWithLighting = `
         varying lowp vec4 vColor;
         varying highp vec3 vLighting;
 
@@ -54,7 +76,7 @@ function main() {
         }
     `
 
-    const vsSourceWithoutLighting = `
+        const vsSourceWithoutLighting = `
         attribute vec4 aVertexPosition;
         attribute vec4 aVertexColor;
 
@@ -69,68 +91,87 @@ function main() {
         }
     `;
 
-    const fsSourceWithoutLighting = `
+        const fsSourceWithoutLighting = `
         varying lowp vec4 vColor;
         void main(void) {
           gl_FragColor = vColor;
         }
     `
 
-    const shaderProgram = lightingEnabled ?
-        initShaderProgram(gl, vsSourceWithLighting, fsSourceWithLighting)
-        : initShaderProgram(gl, vsSourceWithoutLighting, fsSourceWithoutLighting)
+        const shaderProgram = lightingEnabled ?
+            initShaderProgram(vsSourceWithLighting, fsSourceWithLighting)
+            : initShaderProgram(vsSourceWithoutLighting, fsSourceWithoutLighting)
 
-    const programInfo = {
-        program: shaderProgram,
-        attribLocations: {
-            vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
-            vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
-            vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor')
-        },
-        uniformLocations: {
-            projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
-            modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-            normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix')
-        },
-    }
+        const programInfo = {
+            program: shaderProgram,
+            attribLocations: {
+                vertexPosition: gl.getAttribLocation(shaderProgram, 'aVertexPosition'),
+                vertexNormal: gl.getAttribLocation(shaderProgram, 'aVertexNormal'),
+                vertexColor: gl.getAttribLocation(shaderProgram, 'aVertexColor')
+            },
+            uniformLocations: {
+                projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
+                modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
+                normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix')
+            },
+        }
 
-    // Here's where we call the routine that builds all the
-    // objects we'll be drawing.
-    const buffers = initBuffers(gl)
+        // Here's where we call the routine that builds all the
+        // objects we'll be drawing.
+        const buffers = initBuffers()
 
-    var then = 0;
+        /* 
+        var then = 0;
 
-    function render(now) {
-        // convert to seconds
-        now *= 0.001;
-        const deltaTime = now - then;
-        then = now;
+        function render(now) {
+            // convert to seconds
+            now *= 0.001;
+            const deltaTime = now - then;
+            then = now;
 
-        // draw the scene
-        drawScene(gl, programInfo, buffers, deltaTime)
+            // draw the scene
+            drawScene(programInfo, buffers, deltaTime)
+
+            requestAnimationFrame(render)
+        }
 
         requestAnimationFrame(render)
-    }
+         */
 
-    requestAnimationFrame(render)
+        const draw = () => drawScene(programInfo, buffers)
+
+        rotator = new SimpleRotator(canvas, draw)
+
+        console.log(canvas.width, canvas.height, canvas.getBoundingClientRect());
+        
+
+        // rotator.setView(...standardView)
+        rotator.setView([2, 2, 5], [0, 1, 0], 6)
+        draw()
+
+        // resetView(draw);
+
+        console.log('Finished init');
+    }
+    catch (e) {
+        // document.body.innerHTML = "Could not initialize: " + e
+        // return
+        throw e;
+    }
 }
 
-const canvas = document.querySelector('#glCanvas')
+// const lightingCheckbox = document.querySelector('#lightingCheckbox')
+// lightingCheckbox.addEventListener('change', () => {
+//     lightingEnabled = !lightingEnabled
 
-window.onload = main
+//     // the existing render loop has to be stopped first
+//     init()
+// })
 
-const rotationCheckbox = document.querySelector('#rotationCheckbox')
-rotationCheckbox.addEventListener('change', () => {
-    rotate = !rotate
-})
-
-const lightingCheckbox = document.querySelector('#lightingCheckbox')
-lightingCheckbox.addEventListener('change', () => {
-    lightingEnabled = !lightingEnabled
-
-    // the existing render loop has to be stopped first
-    main()
-})
+function resetView(draw) {
+    rotator.setView(...standardView)
+    draw()
+}
 
 function resize(canvas) {
     // Lookup the size the browser is displaying the canvas.
@@ -147,7 +188,7 @@ function resize(canvas) {
     }
 }
 
-function initBuffers(gl) {
+function initBuffers() {
 
     // Create a buffer for the square's positions.
 
@@ -299,16 +340,16 @@ function initBuffers(gl) {
     };
 }
 
-function drawScene(gl, programInfo, buffers, deltaTime) {
+function drawScene(programInfo, buffers) {
 
     // resize according to https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
     resize(gl.canvas);
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);  // Clear to black, fully opaque
-    gl.clearDepth(1.0);                 // Clear everything
-    gl.enable(gl.DEPTH_TEST);           // Enable depth testing
-    gl.depthFunc(gl.LEQUAL);            // Near things obscure far things
+    gl.clearColor(0, 0, 0, 1);
+    gl.clearDepth(1);
+    gl.enable(gl.DEPTH_TEST); // Enable depth testing
+    gl.depthFunc(gl.LEQUAL); // Near things obscure far things
 
     // Clear the canvas before we start drawing on it.
 
@@ -335,6 +376,7 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
         zNear,
         zFar);
 
+    /* 
     // Set the drawing position to the "identity" point, which is
     // the center of the scene.
     const modelViewMatrix = mat4.create();
@@ -347,7 +389,13 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
         [-0.0, 0.0, -6.0]);  // amount to translate
 
     mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation, [0, 0, 1])
-    mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation * .5, [0, 1, 0])
+    mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation, [0, 1, 0])
+    mat4.rotate(modelViewMatrix, modelViewMatrix, cubeRotation, [1, 0, 0])
+    */
+
+    var modelViewMatrix = rotator.getViewMatrix();
+    console.log(modelViewMatrix);
+
 
     // Tell WebGL how to pull out the positions from the position
     // buffer into the vertexPosition attribute.
@@ -444,16 +492,17 @@ function drawScene(gl, programInfo, buffers, deltaTime) {
         gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
 
-    if (rotate) {
-        cubeRotation += deltaTime * rotationSpeed
-    }
+    /* 
+        if (rotate) {
+            cubeRotation += deltaTime * rotationSpeed
+        } */
 }
 
 //
 // creates a shader of the given type, uploads the source and
 // compiles it.
 //
-function loadShader(gl, type, source) {
+function loadShader(type, source) {
     const shader = gl.createShader(type);
 
     // Send the source to the shader object
@@ -478,9 +527,9 @@ function loadShader(gl, type, source) {
 //
 // Initialize a shader program, so WebGL knows how to draw our data
 //
-function initShaderProgram(gl, vsSource, fsSource) {
-    const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
-    const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
+function initShaderProgram(vsSource, fsSource) {
+    const vertexShader = loadShader(gl.VERTEX_SHADER, vsSource);
+    const fragmentShader = loadShader(gl.FRAGMENT_SHADER, fsSource);
 
     // Create the shader program
 
