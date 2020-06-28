@@ -94,8 +94,8 @@ function SimpleRotator(canvas, callback, viewDirectionVector, viewUpVector, view
         if (dragging)
            return;
         dragging = true;
-        document.addEventListener("mousemove", doMouseDrag, false);
-        document.addEventListener("mouseup", doMouseUp, false);
+        document.addEventListener("pointermove", doMouseDrag, false);
+        document.addEventListener("pointerup", doMouseUp, false);
         var box = canvas.getBoundingClientRect();
         prevx = window.pageXOffset + evt.clientX - box.left;
         prevy = window.pageYOffset + evt.clientY - box.top;
@@ -117,8 +117,8 @@ function SimpleRotator(canvas, callback, viewDirectionVector, viewUpVector, view
     }
     function doMouseUp(evt) {
         if (dragging) {
-            document.removeEventListener("mousemove", doMouseDrag, false);
-            document.removeEventListener("mouseup", doMouseUp, false);
+            document.removeEventListener("pointermove", doMouseDrag, false);
+            document.removeEventListener("pointerup", doMouseUp, false);
 	    dragging = false;
         }
     }
@@ -178,6 +178,6 @@ function SimpleRotator(canvas, callback, viewDirectionVector, viewUpVector, view
 	c[2] = z;
     }
     this.setView(viewDirectionVector, viewUpVector, viewDistance);
-    canvas.addEventListener("mousedown", doMouseDown, false);
+    canvas.addEventListener("pointerdown", doMouseDown, false);
 }
 
