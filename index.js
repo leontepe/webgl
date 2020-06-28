@@ -16,13 +16,21 @@ const standardView = [[2, 2, 5], [0, 1, 0], 6];
 
 const rotationSpeed = 1;
 
-var modelViewMatrix = mat4.create()
+var modelViewMatrix;
+
+function logDebug() {
+    console.log(`width: ${canvas.width}`);
+    console.log(`height: ${canvas.height}`);
+    console.log(`clientWidth: ${canvas.clientWidth}`);
+    console.log(`clientHeight: ${canvas.clientHeight}`);
+}
 
 function init() {
-    const rotationCheckbox = document.querySelector('#rotationCheckbox')
+    /* const rotationCheckbox = document.querySelector('#rotationCheckbox')
     rotationCheckbox.addEventListener('change', () => {
         rotate = !rotate
-    })
+    }) */
+
 
     try {
         canvas = document.querySelector('#glCanvas');
@@ -141,15 +149,14 @@ function init() {
         const draw = () => drawScene(programInfo, buffers)
 
         rotator = new SimpleRotator(canvas, draw)
-
-        console.log(canvas.width, canvas.height, canvas.getBoundingClientRect());
         
-
-        // rotator.setView(...standardView)
-        rotator.setView([2, 2, 5], [0, 1, 0], 6)
+        rotator.setView(...standardView)
+        // rotator.setView([2, 2, 5], [0, 1, 0], 6)
         draw()
 
         // resetView(draw);
+
+        window.onresize = draw;
 
         console.log('Finished init');
     }
@@ -175,8 +182,8 @@ function resetView(draw) {
 
 function resize(canvas) {
     // Lookup the size the browser is displaying the canvas.
-    var displayWidth = canvas.clientWidth;
-    var displayHeight = canvas.clientHeight;
+    const displayWidth = canvas.clientWidth;
+    const displayHeight = canvas.clientHeight;
 
     // Check if the canvas is not the same size.
     if (canvas.width != displayWidth ||
@@ -394,8 +401,6 @@ function drawScene(programInfo, buffers) {
     */
 
     var modelViewMatrix = rotator.getViewMatrix();
-    console.log(modelViewMatrix);
-
 
     // Tell WebGL how to pull out the positions from the position
     // buffer into the vertexPosition attribute.
