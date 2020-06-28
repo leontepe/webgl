@@ -1,22 +1,22 @@
 
 "use strict";
 
-var canvas;
+let canvas;
 
-var gl;
+let gl;
 
-var cubeRotation = 0;
-var rotate = true;
-var lightingEnabled = true;
+let cubeRotation = 0;
+let rotate = true;
+let lightingEnabled = true;
 
 /** A SimpleRotator object to enable rotation by mouse dragging. */
-var rotator;
+let rotator;
 
 const standardView = [[2, 2, 5], [0, 1, 0], 6];
 
 const rotationSpeed = 1;
 
-var modelViewMatrix;
+let modelViewMatrix;
 
 function logDebug() {
     console.log(`width: ${canvas.width}`);
@@ -42,9 +42,8 @@ function init() {
         if (!gl) {
             throw "Could not create WebGL context.";
         }
-
         // Vertex shader
-        const vsSourceWithLighting = `
+        const vsSource = `
         attribute vec4 aVertexPosition;
         attribute vec4 aVertexColor;
         
@@ -58,57 +57,45 @@ function init() {
         varying lowp vec4 vColor;
         varying highp vec3 vLighting;
 
-        void main(void) {
+        uniform bool uLightingEnabled;
+
+        void main() {
             gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
             vColor = aVertexColor;
 
             // apply lighting effect
-            highp vec3 ambientLight = vec3(0.3, 0.3, 0.3);
-            highp vec3 directiionalLightColor = vec3(1, 1, 1);
-            highp vec3 directionalVector = normalize(vec3(0.85, 0.8, 0.75));
+            if (uLightingEnabled) {
+                // ambient light
+                highp vec3 ambientLight = vec3(0.0, 0.0, 0.0);
 
-            highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
-
-            highp float directional = max(dot(transformedNormal.xzy, directionalVector), 0.0);
-            vLighting = ambientLight + (directiionalLightColor * directional);
+                // directional light
+                highp vec3 directiionalLightColor = vec3(1, 1, 1); // light color: white
+                highp vec3 directionalVector = normalize(vec3(0, 1, 0));
+    
+                highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
+                highp float directional = max(dot(transformedNormal.xzy, directionalVector), 0.0);
+                
+                // total lighting: ambient light + directional light
+                vLighting = ambientLight + (directiionalLightColor * directional);
+            }
+            else {
+                // no lighting
+                vLighting = vec3(1.0, 1.0, 1.0);
+            }
         }
-    `
+        `;
 
         // Fragment shader
-        const fsSourceWithLighting = `
-        varying lowp vec4 vColor;
-        varying highp vec3 vLighting;
+        const fsSource = `
+            varying lowp vec4 vColor;
+            varying highp vec3 vLighting;
 
-        void main() {
-            gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
-        }
-    `
+            void main() {
+                gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
+            }
+        `;
 
-        const vsSourceWithoutLighting = `
-        attribute vec4 aVertexPosition;
-        attribute vec4 aVertexColor;
-
-        uniform mat4 uModelViewMatrix;
-        uniform mat4 uProjectionMatrix;
-
-        varying lowp vec4 vColor;
-
-        void main(void) {
-          gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-          vColor = aVertexColor;
-        }
-    `;
-
-        const fsSourceWithoutLighting = `
-        varying lowp vec4 vColor;
-        void main(void) {
-          gl_FragColor = vColor;
-        }
-    `
-
-        const shaderProgram = lightingEnabled ?
-            initShaderProgram(vsSourceWithLighting, fsSourceWithLighting)
-            : initShaderProgram(vsSourceWithoutLighting, fsSourceWithoutLighting)
+        const shaderProgram = initShaderProgram(vsSource, fsSource);
 
         const programInfo = {
             program: shaderProgram,
@@ -120,7 +107,8 @@ function init() {
             uniformLocations: {
                 projectionMatrix: gl.getUniformLocation(shaderProgram, 'uProjectionMatrix'),
                 modelViewMatrix: gl.getUniformLocation(shaderProgram, 'uModelViewMatrix'),
-                normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix')
+                normalMatrix: gl.getUniformLocation(shaderProgram, 'uNormalMatrix'),
+                lightingEnabled: gl.getUniformLocation(shaderProgram, 'uLightingEnabled')
             },
         }
 
@@ -304,12 +292,12 @@ function initBuffers() {
         gl.STATIC_DRAW);
 
     const faceColors = [
-        [1.0, 1.0, 1.0, 1.0],    // Front face: white
-        [1.0, 0.0, 0.0, 1.0],    // Back face: red
-        [0.0, 1.0, 0.0, 1.0],    // Top face: green
-        [0.0, 0.0, 1.0, 1.0],    // Bottom face: blue
-        [1.0, 1.0, 0.0, 1.0],    // Right face: yellow
-        [1.0, 0.0, 1.0, 1.0],    // Left face: purple
+        [1.0, 0.0, 0.0, 1.0],    // Front face: red
+        [0.0, 1.0, 0.0, 1.0],    // Back face: green
+        [0.0, 0.0, 1.0, 1.0],    // Top face: blue
+        [1.0, 1.0, 0.0, 1.0],    // Bottom face: yellow
+        [1.0, 0.0, 1.0, 1.0],    // Right face: purple
+        [0.0, 1.0, 1.0, 1.0]    // Left face: cyan/aqua
     ];
 
 
@@ -488,6 +476,8 @@ function drawScene(programInfo, buffers) {
         modelViewMatrix);
 
     gl.uniformMatrix4fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix)
+
+    gl.uniform1i(programInfo.uniformLocations.lightingEnabled, lightingEnabled);
 
     {
         const offset = 0;
