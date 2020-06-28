@@ -180,18 +180,23 @@ function resetView(draw) {
     draw()
 }
 
-function resize(canvas) {
-    // Lookup the size the browser is displaying the canvas.
-    const displayWidth = canvas.clientWidth;
-    const displayHeight = canvas.clientHeight;
+function resize() {
+
+    const realToCSSPixels = window.devicePixelRatio;
+
+    // Lookup the size the browser is displaying the canvas in CSS pixels
+    // and compute a size needed to make our drawingbuffer match it in
+    // device pixels.
+    const displayWidth = Math.floor(gl.canvas.clientWidth * realToCSSPixels);
+    const displayHeight = Math.floor(gl.canvas.clientHeight * realToCSSPixels);
 
     // Check if the canvas is not the same size.
-    if (canvas.width != displayWidth ||
-        canvas.height != displayHeight) {
+    if (gl.canvas.width != displayWidth ||
+        gl.canvas.height != displayHeight) {
 
         // Make the canvas the same size
-        canvas.width = displayWidth;
-        canvas.height = displayHeight;
+        gl.canvas.width = displayWidth;
+        gl.canvas.height = displayHeight;
     }
 }
 
@@ -350,7 +355,7 @@ function initBuffers() {
 function drawScene(programInfo, buffers) {
 
     // resize according to https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
-    resize(gl.canvas);
+    resize();
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
     gl.clearColor(0, 0, 0, 1);
