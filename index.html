@@ -4,15 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebGL 3D Cube</title>
-    
+
     <link rel="stylesheet" href="index.css">
 
+    <!-- shader files -->
+    <script type="x-shader/x-vertex" id="vertex-shader" src="shaders/vertex.glsl"></script>
+    <script type="x-shader/x-fragment" id="fragment-shader" src="shaders/fragment.glsl"></script>
+
+    <!-- javascript files -->
     <script type="text/javascript" src="gl-matrix.js"></script>
     <script type="text/javascript" src="simple-rotator.js"></script>
     <script type="text/javascript" src="index.js"></script>
 </head>
 
 <body onload="init()">
+
+    <div id="window-flash"></div>
+
     <canvas id="glCanvas"></canvas>
 
     <!-- <div id="controls">

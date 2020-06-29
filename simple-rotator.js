@@ -120,9 +120,11 @@ function SimpleRotator(canvas, callback, viewDirectionVector, viewUpVector, view
         }
     }
     function doMouseUp(evt) {
-        console.log('up');
-
         if (dragging) {
+
+            // log view matrix when dragging operation is done
+            // console.log(`View matrix: ${getViewMatrix()}`);
+
             document.removeEventListener("pointermove", doMouseDrag, false);
             document.removeEventListener("pointerup", doMouseUp, false);
             dragging = false;

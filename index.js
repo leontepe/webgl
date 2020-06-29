@@ -12,7 +12,14 @@ let lightingEnabled = true;
 /** A SimpleRotator object to enable rotation by mouse dragging. */
 let rotator;
 
-const standardView = [[2, 2, 5], [0, 1, 0], 6];
+let currentZoom = 8;
+
+const zoomBounds = [5, 30]
+const standardView = () => [[2, 2, 5], [0, 1, 0], currentZoom];
+
+const backgroundColor = [0, 0, 0];
+
+const drawCoordinateAxes = false;
 
 const rotationSpeed = 1;
 
@@ -42,60 +49,11 @@ function init() {
         if (!gl) {
             throw "Could not create WebGL context.";
         }
-        // Vertex shader
-        const vsSource = `
-        attribute vec4 aVertexPosition;
-        attribute vec4 aVertexColor;
-        
-        attribute vec3 aVertexNormal;
 
-        uniform mat4 uModelViewMatrix;
-        uniform mat4 uProjectionMatrix;
-
-        uniform mat4 uNormalMatrix;
-
-        varying lowp vec4 vColor;
-        varying highp vec3 vLighting;
-
-        uniform bool uLightingEnabled;
-
-        void main() {
-            gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition;
-            vColor = aVertexColor;
-
-            // apply lighting effect
-            if (uLightingEnabled) {
-                // ambient light
-                highp vec3 ambientLight = vec3(0.0, 0.0, 0.0);
-
-                // directional light
-                highp vec3 directiionalLightColor = vec3(1, 1, 1); // light color: white
-                highp vec3 directionalVector = normalize(vec3(0, 1, 0));
-    
-                highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0);
-                highp float directional = max(dot(transformedNormal.xzy, directionalVector), 0.0);
-                
-                // total lighting: ambient light + directional light
-                vLighting = ambientLight + (directiionalLightColor * directional);
-            }
-            else {
-                // no lighting
-                vLighting = vec3(1.0, 1.0, 1.0);
-            }
-        }
-        `;
-
-        // Fragment shader
-        const fsSource = `
-            varying lowp vec4 vColor;
-            varying highp vec3 vLighting;
-
-            void main() {
-                gl_FragColor = vec4(vColor.rgb * vLighting, vColor.a);
-            }
-        `;
-
-        const shaderProgram = initShaderProgram(vsSource, fsSource);
+        const vertexShaderSource = getExternalScriptSource("vertex-shader");
+        const fragmentShaderSource = getExternalScriptSource("fragment-shader");
+        const shaderProgram = initShaderProgram(vertexShaderSource, fragmentShaderSource);
+        // const shaderProgram = initShaderProgram(vsSource, fsSource);
 
         const programInfo = {
             program: shaderProgram,
@@ -137,14 +95,28 @@ function init() {
         const draw = () => drawScene(programInfo, buffers)
 
         rotator = new SimpleRotator(canvas, draw)
-        
-        rotator.setView(...standardView)
-        // rotator.setView([2, 2, 5], [0, 1, 0], 6)
-        draw()
 
-        // resetView(draw);
+        resetView(draw);
 
         window.onresize = draw;
+
+        canvas.addEventListener('wheel', (event) => {
+            event.preventDefault();
+
+            const zoomSpeed = 0.01;
+
+            currentZoom += event.deltaY * zoomSpeed;
+
+            // Restrict zoom level
+            currentZoom = Math.min(Math.max(currentZoom, zoomBounds[0]), zoomBounds[1]);
+
+            // update zoom
+            rotator.setViewDistance(currentZoom);
+
+            draw();
+        });
+
+        // canvas.addEventListener("pointerdown", doMouseDown, false);
 
         console.log('Finished init');
     }
@@ -153,6 +125,40 @@ function init() {
         // return
         throw e;
     }
+}
+
+/* Gets the text content of an HTML element.  This is used
+ * to get the shader source from the script elements that contain
+ * it.  The parameter should be the id of the script element.
+ */
+function getTextContent(elementID) {
+    var element = document.getElementById(elementID);
+    var node = element.firstChild;
+    var str = "";
+    while (node) {
+        if (node.nodeType == 3) // this is a text node
+            str += node.textContent;
+        node = node.nextSibling;
+    }
+    return str;
+}
+
+function getExternalScriptSource(elementID) {
+    try {
+        const script = document.getElementById(elementID);
+        // make sure this is a script element with valid src attribute...?
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", script.src, false)
+        xhr.send(null);
+
+        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+            return xhr.responseText;
+        }
+    }
+    catch (e) {
+        throw e;
+    }
+
 }
 
 // const lightingCheckbox = document.querySelector('#lightingCheckbox')
@@ -164,7 +170,7 @@ function init() {
 // })
 
 function resetView(draw) {
-    rotator.setView(...standardView)
+    rotator.setView(...standardView())
     draw()
 }
 
@@ -188,6 +194,66 @@ function resize() {
     }
 }
 
+function getPositionsFromDimensions(width, height, depth) {
+    let frontFace = [
+        -1.0, -1.0, 1.0,
+        1.0, -1.0, 1.0,
+        1.0, 1.0, 1.0,
+        -1.0, 1.0, 1.0,
+    ];
+    let backFace = [
+        -1.0, -1.0, -1.0,
+        -1.0, 1.0, -1.0,
+        1.0, 1.0, -1.0,
+        1.0, -1.0, -1.0,
+    ];
+    let topFace = [
+        -1.0, 1.0, -1.0,
+        -1.0, 1.0, 1.0,
+        1.0, 1.0, 1.0,
+        1.0, 1.0, -1.0,
+    ];
+    let bottomFace = [
+        -1.0, -1.0, -1.0,
+        1.0, -1.0, -1.0,
+        1.0, -1.0, 1.0,
+        -1.0, -1.0, 1.0,
+    ];
+    let rightFace = [
+        1.0, -1.0, -1.0,
+        1.0, 1.0, -1.0,
+        1.0, 1.0, 1.0,
+        1.0, -1.0, 1.0,
+    ];
+    let leftFace = [
+        -1.0, -1.0, -1.0,
+        -1.0, -1.0, 1.0,
+        -1.0, 1.0, 1.0,
+        -1.0, 1.0, -1.0,
+    ]
+
+    const faces = () => [
+        ...frontFace, ...backFace, ...topFace,
+        ...bottomFace, ...rightFace, ...leftFace
+    ];
+
+    // width
+
+    let returnFaces = faces().map((value, i) => {
+        if (i % 3 == 2) {
+            return value * depth / 2;
+        }
+        else if (i % 3 == 1) {
+            return value * height / 2;
+        }
+        else if (i % 3 == 0) {
+            return value * width / 2;
+        }
+    })
+
+    return returnFaces;
+}
+
 function initBuffers() {
 
     // Create a buffer for the square's positions.
@@ -201,51 +267,8 @@ function initBuffers() {
 
     // Now create an array of positions for the square.
 
-    const positions = [
-        // Front face
-        -1.0, -1.0, 1.0,
-        1.0, -1.0, 1.0,
-        1.0, 1.0, 1.0,
-        -1.0, 1.0, 1.0,
-
-        // Back face
-        -1.0, -1.0, -1.0,
-        -1.0, 1.0, -1.0,
-        1.0, 1.0, -1.0,
-        1.0, -1.0, -1.0,
-
-        // Top face
-        -1.0, 1.0, -1.0,
-        -1.0, 1.0, 1.0,
-        1.0, 1.0, 1.0,
-        1.0, 1.0, -1.0,
-
-        // Bottom face
-        -1.0, -1.0, -1.0,
-        1.0, -1.0, -1.0,
-        1.0, -1.0, 1.0,
-        -1.0, -1.0, 1.0,
-
-        // Right face
-        1.0, -1.0, -1.0,
-        1.0, 1.0, -1.0,
-        1.0, 1.0, 1.0,
-        1.0, -1.0, 1.0,
-
-        // Left face
-        -1.0, -1.0, -1.0,
-        -1.0, -1.0, 1.0,
-        -1.0, 1.0, 1.0,
-        -1.0, 1.0, -1.0,
-    ];
-
-    // Now pass the list of positions into WebGL to build the
-    // shape. We do this by creating a Float32Array from the
-    // JavaScript array, then use it to fill the current buffer.
-
-    gl.bufferData(gl.ARRAY_BUFFER,
-        new Float32Array(positions),
-        gl.STATIC_DRAW);
+    const positions = getPositionsFromDimensions(1, 1, 12);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
     const normalBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
@@ -346,7 +369,7 @@ function drawScene(programInfo, buffers) {
     resize();
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    gl.clearColor(0, 0, 0, 1);
+    gl.clearColor(...backgroundColor, 1);
     gl.clearDepth(1);
     gl.enable(gl.DEPTH_TEST); // Enable depth testing
     gl.depthFunc(gl.LEQUAL); // Near things obscure far things
@@ -466,6 +489,8 @@ function drawScene(programInfo, buffers) {
 
     // Set the shader uniforms
 
+    gl.uniform1i(programInfo.uniformLocations.lightingEnabled, lightingEnabled);
+
     gl.uniformMatrix4fv(
         programInfo.uniformLocations.projectionMatrix,
         false,
@@ -476,8 +501,6 @@ function drawScene(programInfo, buffers) {
         modelViewMatrix);
 
     gl.uniformMatrix4fv(programInfo.uniformLocations.normalMatrix, false, normalMatrix)
-
-    gl.uniform1i(programInfo.uniformLocations.lightingEnabled, lightingEnabled);
 
     {
         const offset = 0;
@@ -492,11 +515,53 @@ function drawScene(programInfo, buffers) {
         gl.drawElements(gl.TRIANGLES, vertexCount, type, offset);
     }
 
+    /* Draws a WebGL primitive.  The first parameter must be one of the constants
+    * that specifiy primitives:  gl.POINTS, gl.LINES, gl.LINE_LOOP, gl.LINE_STRIP,
+    * gl.TRIANGLES, gl.TRIANGLE_STRIP, gl.TRIANGLE_FAN.  The second parameter must
+    * be an array of 4 numbers in the range 0.0 to 1.0, giving the RGBA color of
+    * the color of the primitive.  The third parameter must be an array of numbers.
+    * The length of the array must be amultiple of 3.  Each triple of numbers provides
+    * xyz-coords for one vertex for the primitive.  This assumes that uColor is the
+    * location of a color uniform in the shader program, aCoords is the location of
+    * the coords attribute, and aCoordsBuffer is a VBO for the coords attribute.
+    */
+    function drawPrimitive(primitiveType, color, vertices) {
+        gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STREAM_DRAW);
+
+        //gl.uniform4fv(uColor, color);
+
+        gl.enableVertexAttribArray(programInfo.attribLocations.vertexColor);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffers.color);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(color), gl.STREAM_DRAW);
+        gl.vertexAttribPointer(programInfo.attribLocations.vertexColor, 4, gl.FLOAT, false, 0, 0);
+
+
+        gl.vertexAttribPointer(programInfo.attribLocations.vertexPosition, 3, gl.FLOAT, false, 0, 0);
+
+        // drawing call?
+        gl.drawArrays(primitiveType, 0, vertices.length / 3);
+    }
+
+
+    if (drawCoordinateAxes) {
+        // disable lighting for coordinate axes
+        gl.uniform1i(programInfo.uniformLocations.lightingEnabled, 0);
+        gl.lineWidth(4);
+        drawPrimitive(gl.LINES, [1, 0, 0, 1], [-2, 0, 0, 2, 0, 0]);
+        drawPrimitive(gl.LINES, [0, 1, 0, 1], [0, -2, 0, 0, 2, 0]);
+        drawPrimitive(gl.LINES, [0, 0, 1, 1], [0, 0, -2, 0, 0, 2]);
+        gl.lineWidth(1);
+    }
+
+
     /* 
         if (rotate) {
             cubeRotation += deltaTime * rotationSpeed
         } */
 }
+
 
 //
 // creates a shader of the given type, uploads the source and
