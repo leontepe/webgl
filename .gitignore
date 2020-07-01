@@ -1,0 +1,5 @@
+node_modules
+
+# we are using TypeScript, ignore js and js.map files
+*.js
+*.js.map

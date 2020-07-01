@@ -1,0 +1,22 @@
+{
+  "name": "webgl",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leontepe/webgl.git"
+  },
+  "author": "",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/leontepe/webgl/issues"
+  },
+  "homepage": "https://github.com/leontepe/webgl#readme",
+  "devDependencies": {
+    "typescript": "^3.9.5"
+  }
+}
