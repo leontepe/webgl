@@ -26,7 +26,7 @@
  * @param viewDistance if present must be a positive number.  Gives the distance of the viewer
  *    from the origin.  If not present, the length of viewDirectionVector is used.
  */
-function SimpleRotator(canvas, callback, viewDirectionVector, viewUpVector, viewDistance) {
+export function SimpleRotator(canvas, callback, viewDirectionVector = null, viewUpVector = null, viewDistance = null) {
     var unitx = new Array(3);
     var unity = new Array(3);
     var unitz = new Array(3);

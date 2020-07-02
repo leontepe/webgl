@@ -1,5 +1,6 @@
 
-import { mat4 } from "./gl-matrix";
+import { mat4 } from "gl-matrix";
+import { SimpleRotator } from "./simple-rotator";
 
 let canvas;
 
@@ -27,6 +28,8 @@ let modelViewMatrix;
 
 let dragging = false;
 
+window.onload = init;
+
 function logDebug() {
     console.log(`width: ${canvas.width}`);
     console.log(`height: ${canvas.height}`);
@@ -51,6 +54,9 @@ function init() {
         if (!gl) {
             throw "Could not create WebGL context.";
         }
+
+        console.log('lol');
+        
 
         const vertexShaderSource = getExternalScriptSource("vertex-shader");
         const fragmentShaderSource = getExternalScriptSource("fragment-shader");
